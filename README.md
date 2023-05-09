@@ -261,6 +261,87 @@ export const TodoElement = styled.div`
 
 ### 데이터 날짜별 분류
 
+- 투두리스트는 모든 데이터를 불러와서 오늘 날짜의 투두만 필터링하는데, 히스토리는 모든 날짜의 완료된 투두가 날짜의 역순으로 정렬된 상태가 필요하다.
+- 그래서 redux toolkit으로 전역 상태 관리를 해서 각각의 컴포넌트에서 필요한 가공을 하면 좋겠다고 생각했다!
+
+#### Redux-toolkit store
+
+```javascript
+import { configureStore } from "@reduxjs/toolkit";
+import todoSlice from "./todo";
+
+const store = configureStore({
+  reducer: {
+    todo: todoSlice,
+  },
+});
+
+export default store;
+```
+
+#### Provider로 묶어주기
+
+```javascript
+import "./App.css";
+import Router from "./shared/Router";
+import { Provider } from "react-redux";
+import store from "./redux/store";
+
+function App() {
+  return (
+    <>
+      <Provider store={store}>
+        <Router />
+      </Provider>
+    </>
+  );
+}
+
+export default App;
+
+```
+
+#### action 및 reducers
+
+```javascript
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axios from "axios";
+
+const initialState = {
+  todos: [],
+  isLoading: false,
+};
+
+export const getTodos = createAsyncThunk("todo/getTodos", async () => {
+  const res = await axios.get("http://localhost:8080/api/todos");
+  const data = await res.data;
+
+  return data;
+});
+
+export const todoSlice = createSlice({
+  name: "todo",
+  initialState,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(getTodos.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(getTodos.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.todos = action.payload;
+      })
+      .addCase(getTodos.rejected, (state) => {
+        state.isLoading = false;
+      });
+  },
+});
+
+export default todoSlice.reducer;
+```
+
+
 ![](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2F2Tibx%2FbtseyM7VIkP%2FQRiesIqAM8KEKSKRrtVkhk%2Fimg.png)
 - 데이터는 위와같이 분류되지 않은 상태로 들어온다.
 
